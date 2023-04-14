@@ -1,0 +1,732 @@
+import http.client
+import json
+import matplotlib.pyplot as plt
+#red means train is at that station, grey means just a station with no train on it
+station_CircuitIds = {
+    'A15': {'name': 'Shady Grove', 'CircuitId': 7, 'lat': 39.119944113976594, 'lon': -77.16468344068826}, 
+    'A04': {'name': 'Woodley Park', 'CircuitId': 363, 'lat': 38.9244897863372, 'lon': -77.05223543188276}, 
+    'A02': {'name': 'Farragut North', 'CircuitId': 389, 'lat': 38.90357667496837, 'lon': -77.04018336007367},
+    'C15': {'name': 'Huntington', 'CircuitId': 944,'lat': 38.79395029130708, 'lon': -77.07525731770372}, 
+    'N06': {'name': 'Wiehle-Reston', 'CircuitId': 3290,'lat': 38.947857134044064, 'lon': -77.34044691295183}, 
+    'G05': {'name': 'Largo', 'CircuitId': 2487,'lat': 38.9002931705511, 'lon': -76.8446480287199},
+    'C07': {'name': 'Pentagon', 'CircuitId': 1,'lat': 38.8692040840266, 'lon': -77.0537104772945},#1052
+    'A13': {'name': 'Twinbrook', 'CircuitId': 53,'lat': 39.06222515099659, 'lon': -77.12080029259624},
+    'A11': {'name': 'Grovenor', 'CircuitId': 11,'lat': 39.029898669873205, 'lon': -77.10420869815606},
+    'A09': {'name': 'Bethesda', 'CircuitId': 109,'lat': 38.984832966320745, 'lon': -77.09479965352844},
+    'A07': {'name': 'Tenleytown', 'CircuitId': 133,'lat': 38.94806115684782, 'lon': -77.07932925683932},
+    'A05': {'name': 'Cleveland Park', 'CircuitId': 154,'lat': 38.93609385408744,'lon': -77.05897764842783},
+    'A03': {'name': 'Dupont Circle', 'CircuitId': 179,'lat': 38.91122672409163,'lon': -77.04460930376524},
+    'A01': {'name': 'Metro Center', 'CircuitId': 203,'lat': 38.89850391919288,'lon': -77.02783741076684},
+    'A14': {'name': 'Rockville', 'CircuitId': 232,'lat': 39.08441277356925,'lon': -77.14620127631153},
+    'A12': {'name': 'White Flint', 'CircuitId': 260,'lat': 39.047422535731386,'lon':  -77.11275280628124},
+    'A10': {'name': 'Medical Center', 'CircuitId': 294,'lat': 38.99908179745429,'lon': -77.09760601343993},
+    'A08': {'name': 'Friendship Heights', 'CircuitId': 326,'lat': 38.961036254566295,'lon': -77.08603148228603},
+    'A06': {'name': 'Van Ness', 'CircuitId': 346,'lat': 38.944662923948904,'lon': -77.06368786333636},
+    'B01': {'name': 'Gallery Place', 'CircuitId': 667,'lat': 38.89773500670239,'lon':  -77.02185784924178},
+    'B02': {'name': 'Judiciary Sq', 'CircuitId': 677,'lat': 38.896941568783774,'lon': -77.01764265522648},
+    'B03': {'name': 'Union Station', 'CircuitId': 686,'lat': 38.89847906180791,'lon': -77.00720259153182},
+    'B04': {'name': 'Rhode Island', 'CircuitId': 717,'lat': 38.92085954154324,'lon': -76.99600537911444},
+    'B05': {'name': 'Brookland', 'CircuitId': 731,'lat': 38.93324615592563,'lon': -76.99461175375481},
+    'B06': {'name': 'Ft. Totten', 'CircuitId': 757,'lat': 38.952397197094044,'lon':  -77.00241166316337},
+    'B07': {'name': 'Takoma', 'CircuitId': 785,'lat': 38.97568628345705,'lon': -77.0179735132019},
+    'B08': {'name': 'Silver Spring', 'CircuitId': 809,'lat': 38.993614016396094,'lon': -77.0310819495557},
+    'B09': {'name': 'Forrest Glen', 'CircuitId': 828,'lat': 39.015454807755525,'lon': -77.04288856613526},
+    'B10': {'name': 'Wheaton', 'CircuitId': 846,'lat': 39.03878816244309,'lon': -77.05069507022657},
+    'B11': {'name': 'Glenmont', 'CircuitId': 868,'lat': 39.06209093644937,'lon': -77.05384170300383},
+    'B35': {'name': 'NoMa', 'CircuitId': 496 ,'lat': 38.90695386551863,'lon': -77.00325259968311},
+    'C02': {'name': 'McPherson', 'CircuitId': 1126,'lat': 38.90113192234123,'lon': -77.03205151589552},
+    'C03': {'name': 'Farragut West', 'CircuitId': 1310,'lat': 38.901478749619656,'lon': -77.04182962516805},
+    'C04': {'name': 'Foggy Bottom', 'CircuitId': 1105,'lat': 38.90085412130256,'lon': -77.05039906138967},
+    'C05': {'name': 'Rosslyn', 'CircuitId': 1285,'lat': 38.89624933427948,'lon': -77.07062355919952},
+    'C06': {'name': 'Arlington Cemetery', 'CircuitId': 1070,'lat': 38.88477730266833,'lon': -77.06324205303302},
+    'C08': {'name': 'Pentagon City', 'CircuitId': 1230,'lat': 38.8626575540988,'lon': -77.0598455077339},
+    'C09': {'name': 'Crystal City', 'CircuitId': 1024,'lat': 38.85802415814308,'lon': -77.05136807925693},
+    'C10': {'name': 'National Airport', 'CircuitId': 1204 ,'lat': 38.852855310883285,'lon': -77.04384722748453},
+    'C12': {'name': 'Braddock Rd', 'CircuitId': 976,'lat': 38.81455279950587,'lon': -77.0533884438461},
+    'C13': {'name': 'King St', 'CircuitId': 1162,'lat': 38.806921807077494,'lon': -77.06062148993624},
+    'C14': {'name': 'Eisenhower Ave', 'CircuitId': 955,'lat': 38.8003678075681,'lon': -77.07125878775851},
+    'D01': {'name': 'Federal Triangle', 'CircuitId': 1384,'lat': 38.89368996805205,'lon': -77.02839460795224},
+    'D02': {'name': 'Smithsonian', 'CircuitId': 1393,'lat': 38.889092467426806,'lon': -77.02843725395662},
+    'D03': {'name': 'L’Enfant', 'CircuitId': 1400,'lat': 38.886025438234995,'lon': -77.02184610345425},
+    'D04': {'name': 'Federal Center', 'CircuitId': 1406,'lat': 38.8848802921736,'lon': -77.0153747271943},
+    'D05': {'name': 'Capitol South ', 'CircuitId': 1418,'lat': 38.88536744865067,'lon': -77.00606520838143},
+    'D06': {'name': 'Eastern Market', 'CircuitId': 1424,'lat': 38.88430857296816,'lon': -76.99577747942547},
+    'D07': {'name': 'Potomac Ave', 'CircuitId': 1436,'lat': 38.881116663551246,'lon': -76.98525793805157},
+    'D08': {'name': 'Stadium Armory', 'CircuitId': 1443,'lat': 38.88867361934526,'lon': -76.97684213003308},
+    'D09': {'name': 'Minnesota', 'CircuitId': 1475,'lat': 38.899137921595866,'lon': -76.94694103863716},
+    'D10': {'name': 'Deanwood', 'CircuitId': 1487,'lat': 38.90824671258547,'lon':  -76.93535406747216},
+    'D11': {'name': 'Cheverly', 'CircuitId': 1500,'lat': 38.91665847770467,'lon': -76.91680375672506},
+    'D12': {'name': 'Landover', 'CircuitId': 1522,'lat': 38.9335049764476,'lon': -76.89137186033787},
+    'D13': {'name': 'New Carrollton', 'CircuitId': 1542,'lat': 38.947989827328996,'lon': -76.87199518917558},
+    'E01': {'name': 'Mt. Vernon Sq.', 'CircuitId': 1753,'lat': 38.90548642713188,'lon': -77.02209379163557},
+    'E02': {'name': 'Shaw-Howard', 'CircuitId': 1764,'lat': 38.91447605665546,'lon':  -77.02184116468733},
+    'E03': {'name': 'U St.', 'CircuitId': 1773,'lat': 38.91691224412294,'lon':  -77.0291119008519},
+    'E04': {'name': 'Columbia Heights', 'CircuitId': 1782,'lat': 38.928935876095856,'lon': -77.03253821002616},
+    'E05': {'name': 'Georgia Ave', 'CircuitId': 1796,'lat': 38.936940752440876,'lon': -77.02422050126286},
+    'E07': {'name': 'West Hyattsville', 'CircuitId': 1833,'lat': 38.95568709099133,'lon': -76.96923066199722},
+    'E08': {'name': 'PG Plaza', 'CircuitId': 1850,'lat': 38.96529519407161,'lon': -76.9567759843632},
+    'E09': {'name': 'College Park', 'CircuitId': 1871 ,'lat': 38.9785097785677,'lon': -76.92828252972589},
+    'E10': {'name': 'Greenbelt', 'CircuitId': 1894,'lat': 39.01100246911824,'lon': -76.91132129742199},
+    'F02': {'name': 'Archives', 'CircuitId': 2241,'lat': 38.89385746121453,'lon': -77.02208946701377},
+    'F04': {'name': 'Waterfront', 'CircuitId': 2219,'lat': 38.87669150325934,'lon': -77.01749266000976},
+    'F05': {'name': 'Navy Yard', 'CircuitId': 2342,'lat': 38.87664678969862,'lon': -77.00446122766182},
+    'F06': {'name': 'Anacostia', 'CircuitId': 2199,'lat': 38.86217964180328,'lon': -76.99538515269236},
+    'F07': {'name': 'Congress Heights', 'CircuitId': 2317,'lat': 38.845152996460754,'lon': -76.98784344672666},
+    'F09': {'name': 'Naylor Rd', 'CircuitId': 2154,'lat': 38.851131055029086,'lon':  -76.95680241588083},
+    'F10': {'name': 'Suitland', 'CircuitId': 2272,'lat': 38.84390420619123,'lon': -76.93196725717101},
+    'F11': {'name': 'Branch Ave', 'CircuitId':  2118,'lat': 38.82698534959803, 'lon': -76.91220799705431},
+    'G01': {'name': 'Benning Rd.', 'CircuitId': 2420,'lat': 38.890479110356935,'lon': -76.93748992214401},
+    'G02': {'name': 'Capitol Heights', 'CircuitId': 2434,'lat': 38.88949404773454,'lon': -76.9129862005538},
+    'G03': {'name': 'Addison Rd.', 'CircuitId': 2449,'lat': 38.88678069247817,'lon': -76.8956706948654},
+    'G04': {'name': 'Morgan Blvd', 'CircuitId': 2469,'lat': 38.893891613068774,'lon': -76.86805983524145},
+    'J02': {'name': 'Van Dorn', 'CircuitId': 2709,'lat': 38.79930303990667,'lon': -77.12946194006483},
+    'J03': {'name': 'Franconia-Springfield', 'CircuitId': 2604,'lat': 38.766703219351534,'lon': -77.16757629460928},
+    'K01': {'name': 'Court House', 'CircuitId': 2911,'lat': 38.89114139155507,'lon': -77.08506080844623},
+    'K02': {'name': 'Clarendon', 'CircuitId': 3048,'lat': 38.88706152679803,'lon': -77.0950944330789},
+    'K03': {'name': 'Virginia Sq.', 'CircuitId': 2886,'lat': 38.88288822151929,'lon':  -77.10324655192137},
+    'K04': {'name': 'Ballston', 'CircuitId': 3023,'lat': 38.881915059907236,'lon': -77.11148043178044},
+    'K05': {'name': 'East Falls Church', 'CircuitId': 2844,'lat': 38.8860611508806,'lon': -77.15687634554216},
+    'K06': {'name': 'West Falls Church', 'CircuitId': 2817,'lat': 38.90081912252609,'lon': -77.18872713885447},
+    'K07': {'name': 'Dunn Loring', 'CircuitId': 2954,'lat': 38.88371523105954,'lon': -77.2271462676979},
+    'K08': {'name': 'Vienna', 'CircuitId': 2774,'lat': 38.877681028268306,'lon': -77.27182559206575},
+    'N01': {'name': 'McLean', 'CircuitId': 3228,'lat': 38.924387240196296,'lon': -77.21038481555841},
+    'N02': {'name': 'Tysons', 'CircuitId': 3370,'lat': 38.92061381344765,'lon': -77.22260746768771},
+    'N03': {'name': 'Greensboro', 'CircuitId': 3221,'lat': 38.921528160927096,'lon': -77.23444908118348},
+    'N04': {'name': 'Spring Hill', 'CircuitId': 3352,'lat': 38.92943537024262,'lon': -77.24215029837916},
+    'N07': {'name': 'Reston Town Center', 'CircuitId': 3627,'lat': 38.95278837376813,'lon': -77.3605297943369},
+    'N08': {'name': 'Herndon', 'CircuitId': 3724,'lat': 38.95286701416582,'lon': -77.38563686080673},
+    'N09': {'name': 'Innovation Center', 'CircuitId': 3594,'lat': 38.96128057541083, 'lon': -77.41669938835972},
+    'N10': {'name': 'Dulles Airport', 'CircuitId': 3689,'lat': 38.95578463485285, 'lon':-77.44754584253802},
+    'N11': {'name': 'Loudoun Gateway', 'CircuitId': 3544,'lat': 38.99234529314664, 'lon':-77.46109071350442},
+    'N12': {'name': 'Ashburn', 'CircuitId': 3637,'lat': 39.00561757495573, 'lon': -77.49179319836479}
+}
+
+WMATA_API_KEY = 'APIHERE' #from api.wmata.com register with your email
+
+def get_train_positions():
+    conn = http.client.HTTPSConnection('api.wmata.com')
+    headers = {'api_key': WMATA_API_KEY}
+    
+    conn.request('GET', '/TrainPositions/TrainPositions?contentType=json', headers=headers)
+    response = conn.getresponse()
+    data = response.read().decode('utf-8')
+    conn.close()
+    return json.loads(data)
+
+data = get_train_positions()
+train_positions = data['TrainPositions']
+x = []
+y = []
+labels = []
+
+for train in train_positions:
+    circuit_id = train['CircuitId']
+    seconds_at_location = train.get('SecondsAtLocation')
+    station_code = train.get('StationCode')
+    #print(f"CircuitId: {circuit_id}, SecondsAtLocation: {seconds_at_location}")
+    if circuit_id in [s['CircuitId'] for s in station_CircuitIds.values()]:
+        station = next(s for s in station_CircuitIds.values() if s['CircuitId'] == circuit_id)
+        x.append(station['lon'])
+        y.append(station['lat'])
+        labels.append(station['name'])
+    
+fig, ax = plt.subplots()
+ax.scatter(x, y, marker='o', color='red', label='Train Stations')
+
+for i, label in enumerate(labels):
+    ax.annotate(label, (x[i], y[i]))
+
+x.append(station_CircuitIds['C07']['lon'])
+y.append(station_CircuitIds['C07']['lat'])
+labels.append(station_CircuitIds['C07']['name'])
+ax.scatter(station_CircuitIds['C07']['lon'], station_CircuitIds['C07']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C07']['name'], (station_CircuitIds['C07']['lon'], station_CircuitIds['C07']['lat']))
+
+x.append(station_CircuitIds['A15']['lon'])
+y.append(station_CircuitIds['A15']['lat'])
+labels.append(station_CircuitIds['A15']['name'])
+ax.scatter(station_CircuitIds['A15']['lon'], station_CircuitIds['A15']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A15']['name'], (station_CircuitIds['A15']['lon'], station_CircuitIds['A15']['lat']))
+
+x.append(station_CircuitIds['A04']['lon'])
+y.append(station_CircuitIds['A04']['lat'])
+labels.append(station_CircuitIds['A04']['name'])
+ax.scatter(station_CircuitIds['A04']['lon'], station_CircuitIds['A04']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A04']['name'], (station_CircuitIds['A04']['lon'], station_CircuitIds['A04']['lat']))
+
+
+
+x.append(station_CircuitIds['A02']['lon'])
+y.append(station_CircuitIds['A02']['lat'])
+labels.append(station_CircuitIds['A02']['name'])
+ax.scatter(station_CircuitIds['A02']['lon'], station_CircuitIds['A02']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A02']['name'], (station_CircuitIds['A02']['lon'], station_CircuitIds['A02']['lat'])) 
+
+x.append(station_CircuitIds['C15']['lon'])
+y.append(station_CircuitIds['C15']['lat'])
+labels.append(station_CircuitIds['C15']['name'])
+ax.scatter(station_CircuitIds['C15']['lon'], station_CircuitIds['C15']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C15']['name'], (station_CircuitIds['C15']['lon'], station_CircuitIds['C15']['lat']))
+
+x.append(station_CircuitIds['N06']['lon'])
+y.append(station_CircuitIds['N06']['lat'])
+labels.append(station_CircuitIds['N06']['name'])
+ax.scatter(station_CircuitIds['N06']['lon'], station_CircuitIds['N06']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['N06']['name'], (station_CircuitIds['N06']['lon'], station_CircuitIds['N06']['lat']))
+
+x.append(station_CircuitIds['G05']['lon'])
+y.append(station_CircuitIds['G05']['lat'])
+labels.append(station_CircuitIds['G05']['name'])
+ax.scatter(station_CircuitIds['G05']['lon'], station_CircuitIds['G05']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['G05']['name'], (station_CircuitIds['G05']['lon'], station_CircuitIds['G05']['lat']))
+
+x.append(station_CircuitIds['A13']['lon'])
+y.append(station_CircuitIds['A13']['lat'])
+labels.append(station_CircuitIds['A13']['name'])
+ax.scatter(station_CircuitIds['A13']['lon'], station_CircuitIds['A13']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A13']['name'], (station_CircuitIds['A13']['lon'], station_CircuitIds['A13']['lat']))
+
+x.append(station_CircuitIds['A11']['lon'])
+y.append(station_CircuitIds['A11']['lat'])
+labels.append(station_CircuitIds['A11']['name'])
+ax.scatter(station_CircuitIds['A11']['lon'], station_CircuitIds['A11']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A11']['name'], (station_CircuitIds['A11']['lon'], station_CircuitIds['A11']['lat']))
+
+x.append(station_CircuitIds['A09']['lon'])
+y.append(station_CircuitIds['A09']['lat'])
+labels.append(station_CircuitIds['A09']['name'])
+ax.scatter(station_CircuitIds['A09']['lon'], station_CircuitIds['A09']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A09']['name'], (station_CircuitIds['A09']['lon'], station_CircuitIds['A09']['lat']))
+
+x.append(station_CircuitIds['A07']['lon'])
+y.append(station_CircuitIds['A07']['lat'])
+labels.append(station_CircuitIds['A07']['name'])
+ax.scatter(station_CircuitIds['A07']['lon'], station_CircuitIds['A07']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A07']['name'], (station_CircuitIds['A07']['lon'], station_CircuitIds['A07']['lat']))
+
+x.append(station_CircuitIds['A05']['lon'])
+y.append(station_CircuitIds['A05']['lat'])
+labels.append(station_CircuitIds['A05']['name'])
+ax.scatter(station_CircuitIds['A05']['lon'], station_CircuitIds['A05']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A05']['name'], (station_CircuitIds['A05']['lon'], station_CircuitIds['A05']['lat']))
+
+x.append(station_CircuitIds['A03']['lon'])
+y.append(station_CircuitIds['A03']['lat'])
+labels.append(station_CircuitIds['A03']['name'])
+ax.scatter(station_CircuitIds['A03']['lon'], station_CircuitIds['A03']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A03']['name'], (station_CircuitIds['A03']['lon'], station_CircuitIds['A03']['lat']))
+
+x.append(station_CircuitIds['A01']['lon'])
+y.append(station_CircuitIds['A01']['lat'])
+labels.append(station_CircuitIds['A01']['name'])
+ax.scatter(station_CircuitIds['A01']['lon'], station_CircuitIds['A01']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A01']['name'], (station_CircuitIds['A01']['lon'], station_CircuitIds['A01']['lat']))
+
+x.append(station_CircuitIds['A14']['lon'])
+y.append(station_CircuitIds['A14']['lat'])
+labels.append(station_CircuitIds['A14']['name'])
+ax.scatter(station_CircuitIds['A14']['lon'], station_CircuitIds['A14']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A14']['name'], (station_CircuitIds['A14']['lon'], station_CircuitIds['A14']['lat']))
+
+x.append(station_CircuitIds['A12']['lon'])
+y.append(station_CircuitIds['A12']['lat'])
+labels.append(station_CircuitIds['A12']['name'])
+ax.scatter(station_CircuitIds['A12']['lon'], station_CircuitIds['A12']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A12']['name'], (station_CircuitIds['A12']['lon'], station_CircuitIds['A12']['lat']))
+
+x.append(station_CircuitIds['A10']['lon'])
+y.append(station_CircuitIds['A10']['lat'])
+labels.append(station_CircuitIds['A10']['name'])
+ax.scatter(station_CircuitIds['A10']['lon'], station_CircuitIds['A10']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A10']['name'], (station_CircuitIds['A10']['lon'], station_CircuitIds['A10']['lat']))
+
+x.append(station_CircuitIds['A08']['lon'])
+y.append(station_CircuitIds['A08']['lat'])
+labels.append(station_CircuitIds['A08']['name'])
+ax.scatter(station_CircuitIds['A08']['lon'], station_CircuitIds['A08']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A08']['name'], (station_CircuitIds['A08']['lon'], station_CircuitIds['A08']['lat']))
+
+x.append(station_CircuitIds['A06']['lon'])
+y.append(station_CircuitIds['A06']['lat'])
+labels.append(station_CircuitIds['A06']['name'])
+ax.scatter(station_CircuitIds['A06']['lon'], station_CircuitIds['A06']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['A06']['name'], (station_CircuitIds['A06']['lon'], station_CircuitIds['A06']['lat']))
+
+x.append(station_CircuitIds['B01']['lon'])
+y.append(station_CircuitIds['B01']['lat'])
+labels.append(station_CircuitIds['B01']['name'])
+ax.scatter(station_CircuitIds['B01']['lon'], station_CircuitIds['B01']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B01']['name'], (station_CircuitIds['B01']['lon'], station_CircuitIds['B01']['lat']))
+
+x.append(station_CircuitIds['B02']['lon'])
+y.append(station_CircuitIds['B02']['lat'])
+labels.append(station_CircuitIds['B02']['name'])
+ax.scatter(station_CircuitIds['B02']['lon'], station_CircuitIds['B02']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B02']['name'], (station_CircuitIds['B02']['lon'], station_CircuitIds['B02']['lat']))
+
+x.append(station_CircuitIds['B03']['lon'])
+y.append(station_CircuitIds['B03']['lat'])
+labels.append(station_CircuitIds['B03']['name'])
+ax.scatter(station_CircuitIds['B03']['lon'], station_CircuitIds['B03']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B03']['name'], (station_CircuitIds['B03']['lon'], station_CircuitIds['B03']['lat']))
+
+x.append(station_CircuitIds['B04']['lon'])
+y.append(station_CircuitIds['B04']['lat'])
+labels.append(station_CircuitIds['B04']['name'])
+ax.scatter(station_CircuitIds['B04']['lon'], station_CircuitIds['B04']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B04']['name'], (station_CircuitIds['B04']['lon'], station_CircuitIds['B04']['lat']))
+
+
+
+x.append(station_CircuitIds['B05']['lon'])
+y.append(station_CircuitIds['B05']['lat'])
+labels.append(station_CircuitIds['B05']['name'])
+ax.scatter(station_CircuitIds['B05']['lon'], station_CircuitIds['B05']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B05']['name'], (station_CircuitIds['B05']['lon'], station_CircuitIds['B05']['lat']))
+
+x.append(station_CircuitIds['B06']['lon'])
+y.append(station_CircuitIds['B06']['lat'])
+labels.append(station_CircuitIds['B06']['name'])
+ax.scatter(station_CircuitIds['B06']['lon'], station_CircuitIds['B06']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B06']['name'], (station_CircuitIds['B06']['lon'], station_CircuitIds['B06']['lat']))
+
+x.append(station_CircuitIds['B07']['lon'])
+y.append(station_CircuitIds['B07']['lat'])
+labels.append(station_CircuitIds['B07']['name'])
+ax.scatter(station_CircuitIds['B07']['lon'], station_CircuitIds['B07']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B07']['name'], (station_CircuitIds['B07']['lon'], station_CircuitIds['B07']['lat']))
+
+x.append(station_CircuitIds['B08']['lon'])
+y.append(station_CircuitIds['B08']['lat'])
+labels.append(station_CircuitIds['B08']['name'])
+ax.scatter(station_CircuitIds['B08']['lon'], station_CircuitIds['B08']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B08']['name'], (station_CircuitIds['B08']['lon'], station_CircuitIds['B08']['lat']))
+
+x.append(station_CircuitIds['B09']['lon'])
+y.append(station_CircuitIds['B09']['lat'])
+labels.append(station_CircuitIds['B09']['name'])
+ax.scatter(station_CircuitIds['B09']['lon'], station_CircuitIds['B09']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B09']['name'], (station_CircuitIds['B09']['lon'], station_CircuitIds['B09']['lat']))
+
+x.append(station_CircuitIds['B10']['lon'])
+y.append(station_CircuitIds['B10']['lat'])
+labels.append(station_CircuitIds['B10']['name'])
+ax.scatter(station_CircuitIds['B10']['lon'], station_CircuitIds['B10']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B10']['name'], (station_CircuitIds['B10']['lon'], station_CircuitIds['B10']['lat']))
+
+x.append(station_CircuitIds['B11']['lon'])
+y.append(station_CircuitIds['B11']['lat'])
+labels.append(station_CircuitIds['B11']['name'])
+ax.scatter(station_CircuitIds['B11']['lon'], station_CircuitIds['B11']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B11']['name'], (station_CircuitIds['B11']['lon'], station_CircuitIds['B11']['lat']))
+
+x.append(station_CircuitIds['B35']['lon'])
+y.append(station_CircuitIds['B35']['lat'])
+labels.append(station_CircuitIds['B35']['name'])
+ax.scatter(station_CircuitIds['B35']['lon'], station_CircuitIds['B35']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['B35']['name'], (station_CircuitIds['B35']['lon'], station_CircuitIds['B35']['lat']))
+
+x.append(station_CircuitIds['C02']['lon'])
+y.append(station_CircuitIds['C02']['lat'])
+labels.append(station_CircuitIds['C02']['name'])
+ax.scatter(station_CircuitIds['C02']['lon'], station_CircuitIds['C02']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C02']['name'], (station_CircuitIds['C02']['lon'], station_CircuitIds['C02']['lat']))
+
+x.append(station_CircuitIds['C03']['lon'])
+y.append(station_CircuitIds['C03']['lat'])
+labels.append(station_CircuitIds['C03']['name'])
+ax.scatter(station_CircuitIds['C03']['lon'], station_CircuitIds['C03']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C03']['name'], (station_CircuitIds['C03']['lon'], station_CircuitIds['C03']['lat']))
+
+x.append(station_CircuitIds['C04']['lon'])
+y.append(station_CircuitIds['C04']['lat'])
+labels.append(station_CircuitIds['C04']['name'])
+ax.scatter(station_CircuitIds['C04']['lon'], station_CircuitIds['C04']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C04']['name'], (station_CircuitIds['C04']['lon'], station_CircuitIds['C04']['lat']))
+
+x.append(station_CircuitIds['C05']['lon'])
+y.append(station_CircuitIds['C05']['lat'])
+labels.append(station_CircuitIds['C05']['name'])
+ax.scatter(station_CircuitIds['C05']['lon'], station_CircuitIds['C05']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C05']['name'], (station_CircuitIds['C05']['lon'], station_CircuitIds['C05']['lat']))
+
+x.append(station_CircuitIds['C06']['lon'])
+y.append(station_CircuitIds['C06']['lat'])
+labels.append(station_CircuitIds['C06']['name'])
+ax.scatter(station_CircuitIds['C06']['lon'], station_CircuitIds['C06']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C06']['name'], (station_CircuitIds['C06']['lon'], station_CircuitIds['C06']['lat']))
+
+x.append(station_CircuitIds['C08']['lon'])
+y.append(station_CircuitIds['C08']['lat'])
+labels.append(station_CircuitIds['C08']['name'])
+ax.scatter(station_CircuitIds['C08']['lon'], station_CircuitIds['C08']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C08']['name'], (station_CircuitIds['C08']['lon'], station_CircuitIds['C08']['lat']))
+
+x.append(station_CircuitIds['C09']['lon'])
+y.append(station_CircuitIds['C09']['lat'])
+labels.append(station_CircuitIds['C09']['name'])
+ax.scatter(station_CircuitIds['C09']['lon'], station_CircuitIds['C09']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C09']['name'], (station_CircuitIds['C09']['lon'], station_CircuitIds['C09']['lat']))
+
+x.append(station_CircuitIds['C10']['lon'])
+y.append(station_CircuitIds['C10']['lat'])
+labels.append(station_CircuitIds['C10']['name'])
+ax.scatter(station_CircuitIds['C10']['lon'], station_CircuitIds['C10']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C10']['name'], (station_CircuitIds['C10']['lon'], station_CircuitIds['C10']['lat']))
+
+x.append(station_CircuitIds['C12']['lon'])
+y.append(station_CircuitIds['C12']['lat'])
+labels.append(station_CircuitIds['C12']['name'])
+ax.scatter(station_CircuitIds['C12']['lon'], station_CircuitIds['C12']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C12']['name'], (station_CircuitIds['C12']['lon'], station_CircuitIds['C12']['lat']))
+
+x.append(station_CircuitIds['C13']['lon'])
+y.append(station_CircuitIds['C13']['lat'])
+labels.append(station_CircuitIds['C13']['name'])
+ax.scatter(station_CircuitIds['C13']['lon'], station_CircuitIds['C13']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C13']['name'], (station_CircuitIds['C13']['lon'], station_CircuitIds['C13']['lat']))
+
+x.append(station_CircuitIds['C14']['lon'])
+y.append(station_CircuitIds['C14']['lat'])
+labels.append(station_CircuitIds['C14']['name'])
+ax.scatter(station_CircuitIds['C14']['lon'], station_CircuitIds['C14']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['C14']['name'], (station_CircuitIds['C14']['lon'], station_CircuitIds['C14']['lat']))
+
+x.append(station_CircuitIds['D01']['lon'])
+y.append(station_CircuitIds['D01']['lat'])
+labels.append(station_CircuitIds['D01']['name'])
+ax.scatter(station_CircuitIds['D01']['lon'], station_CircuitIds['D01']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D01']['name'], (station_CircuitIds['D01']['lon'], station_CircuitIds['D01']['lat']))
+
+
+
+
+x.append(station_CircuitIds['D02']['lon'])
+y.append(station_CircuitIds['D02']['lat'])
+labels.append(station_CircuitIds['D02']['name'])
+ax.scatter(station_CircuitIds['D02']['lon'], station_CircuitIds['D02']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D02']['name'], (station_CircuitIds['D02']['lon'], station_CircuitIds['D02']['lat']))
+
+x.append(station_CircuitIds['D03']['lon'])
+y.append(station_CircuitIds['D03']['lat'])
+labels.append(station_CircuitIds['D03']['name'])
+ax.scatter(station_CircuitIds['D03']['lon'], station_CircuitIds['D03']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D03']['name'], (station_CircuitIds['D03']['lon'], station_CircuitIds['D03']['lat']))
+
+x.append(station_CircuitIds['D04']['lon'])
+y.append(station_CircuitIds['D04']['lat'])
+labels.append(station_CircuitIds['D04']['name'])
+ax.scatter(station_CircuitIds['D04']['lon'], station_CircuitIds['D04']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D04']['name'], (station_CircuitIds['D04']['lon'], station_CircuitIds['D04']['lat']))
+
+x.append(station_CircuitIds['D05']['lon'])
+y.append(station_CircuitIds['D05']['lat'])
+labels.append(station_CircuitIds['D05']['name'])
+ax.scatter(station_CircuitIds['D05']['lon'], station_CircuitIds['D05']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D05']['name'], (station_CircuitIds['D05']['lon'], station_CircuitIds['D05']['lat']))
+
+x.append(station_CircuitIds['D06']['lon'])
+y.append(station_CircuitIds['D06']['lat'])
+labels.append(station_CircuitIds['D06']['name'])
+ax.scatter(station_CircuitIds['D06']['lon'], station_CircuitIds['D06']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D06']['name'], (station_CircuitIds['D06']['lon'], station_CircuitIds['D06']['lat']))
+
+x.append(station_CircuitIds['D07']['lon'])
+y.append(station_CircuitIds['D07']['lat'])
+labels.append(station_CircuitIds['D07']['name'])
+ax.scatter(station_CircuitIds['D07']['lon'], station_CircuitIds['D07']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D07']['name'], (station_CircuitIds['D07']['lon'], station_CircuitIds['D07']['lat']))
+
+x.append(station_CircuitIds['D08']['lon'])
+y.append(station_CircuitIds['D08']['lat'])
+labels.append(station_CircuitIds['D08']['name'])
+ax.scatter(station_CircuitIds['D08']['lon'], station_CircuitIds['D08']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D08']['name'], (station_CircuitIds['D08']['lon'], station_CircuitIds['D08']['lat']))
+
+x.append(station_CircuitIds['D09']['lon'])
+y.append(station_CircuitIds['D09']['lat'])
+labels.append(station_CircuitIds['D09']['name'])
+ax.scatter(station_CircuitIds['D09']['lon'], station_CircuitIds['D09']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D09']['name'], (station_CircuitIds['D09']['lon'], station_CircuitIds['D09']['lat']))
+
+x.append(station_CircuitIds['D10']['lon'])
+y.append(station_CircuitIds['D10']['lat'])
+labels.append(station_CircuitIds['D10']['name'])
+ax.scatter(station_CircuitIds['D10']['lon'], station_CircuitIds['D10']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D10']['name'], (station_CircuitIds['D10']['lon'], station_CircuitIds['D10']['lat']))
+
+x.append(station_CircuitIds['D11']['lon'])
+y.append(station_CircuitIds['D11']['lat'])
+labels.append(station_CircuitIds['D11']['name'])
+ax.scatter(station_CircuitIds['D11']['lon'], station_CircuitIds['D11']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D11']['name'], (station_CircuitIds['D11']['lon'], station_CircuitIds['D11']['lat']))
+
+x.append(station_CircuitIds['D12']['lon'])
+y.append(station_CircuitIds['D12']['lat'])
+labels.append(station_CircuitIds['D12']['name'])
+ax.scatter(station_CircuitIds['D12']['lon'], station_CircuitIds['D12']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D12']['name'], (station_CircuitIds['D12']['lon'], station_CircuitIds['D12']['lat']))
+
+x.append(station_CircuitIds['D13']['lon'])
+y.append(station_CircuitIds['D13']['lat'])
+labels.append(station_CircuitIds['D13']['name'])
+ax.scatter(station_CircuitIds['D13']['lon'], station_CircuitIds['D13']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['D13']['name'], (station_CircuitIds['D13']['lon'], station_CircuitIds['D13']['lat']))
+
+x.append(station_CircuitIds['E01']['lon'])
+y.append(station_CircuitIds['E01']['lat'])
+labels.append(station_CircuitIds['E01']['name'])
+ax.scatter(station_CircuitIds['E01']['lon'], station_CircuitIds['E01']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['E01']['name'], (station_CircuitIds['E01']['lon'], station_CircuitIds['E01']['lat']))
+
+x.append(station_CircuitIds['E02']['lon'])
+y.append(station_CircuitIds['E02']['lat'])
+labels.append(station_CircuitIds['E02']['name'])
+ax.scatter(station_CircuitIds['E02']['lon'], station_CircuitIds['E02']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['E02']['name'], (station_CircuitIds['E02']['lon'], station_CircuitIds['E02']['lat']))
+
+x.append(station_CircuitIds['E03']['lon'])
+y.append(station_CircuitIds['E03']['lat'])
+labels.append(station_CircuitIds['E03']['name'])
+ax.scatter(station_CircuitIds['E03']['lon'], station_CircuitIds['E03']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['E03']['name'], (station_CircuitIds['E03']['lon'], station_CircuitIds['E03']['lat']))
+
+x.append(station_CircuitIds['E04']['lon'])
+y.append(station_CircuitIds['E04']['lat'])
+labels.append(station_CircuitIds['E04']['name'])
+ax.scatter(station_CircuitIds['E04']['lon'], station_CircuitIds['E04']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['E04']['name'], (station_CircuitIds['E04']['lon'], station_CircuitIds['E04']['lat']))
+
+x.append(station_CircuitIds['E05']['lon'])
+y.append(station_CircuitIds['E05']['lat'])
+labels.append(station_CircuitIds['E05']['name'])
+ax.scatter(station_CircuitIds['E05']['lon'], station_CircuitIds['E05']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['E05']['name'], (station_CircuitIds['E05']['lon'], station_CircuitIds['E05']['lat']))
+
+x.append(station_CircuitIds['E07']['lon'])
+y.append(station_CircuitIds['E07']['lat'])
+labels.append(station_CircuitIds['E07']['name'])
+ax.scatter(station_CircuitIds['E07']['lon'], station_CircuitIds['E07']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['E07']['name'], (station_CircuitIds['E07']['lon'], station_CircuitIds['E07']['lat']))
+
+x.append(station_CircuitIds['E08']['lon'])
+y.append(station_CircuitIds['E08']['lat'])
+labels.append(station_CircuitIds['E08']['name'])
+ax.scatter(station_CircuitIds['E08']['lon'], station_CircuitIds['E08']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['E08']['name'], (station_CircuitIds['E08']['lon'], station_CircuitIds['E08']['lat']))
+
+x.append(station_CircuitIds['E09']['lon'])
+y.append(station_CircuitIds['E09']['lat'])
+labels.append(station_CircuitIds['E09']['name'])
+ax.scatter(station_CircuitIds['E09']['lon'], station_CircuitIds['E09']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['E09']['name'], (station_CircuitIds['E09']['lon'], station_CircuitIds['E09']['lat']))
+
+
+
+
+
+x.append(station_CircuitIds['E10']['lon'])
+y.append(station_CircuitIds['E10']['lat'])
+labels.append(station_CircuitIds['E10']['name'])
+ax.scatter(station_CircuitIds['E10']['lon'], station_CircuitIds['E10']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['E10']['name'], (station_CircuitIds['E10']['lon'], station_CircuitIds['E10']['lat']))
+
+x.append(station_CircuitIds['F02']['lon'])
+y.append(station_CircuitIds['F02']['lat'])
+labels.append(station_CircuitIds['F02']['name'])
+ax.scatter(station_CircuitIds['F02']['lon'], station_CircuitIds['F02']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['F02']['name'], (station_CircuitIds['F02']['lon'], station_CircuitIds['F02']['lat']))
+
+x.append(station_CircuitIds['F04']['lon'])
+y.append(station_CircuitIds['F04']['lat'])
+labels.append(station_CircuitIds['F04']['name'])
+ax.scatter(station_CircuitIds['F04']['lon'], station_CircuitIds['F04']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['F04']['name'], (station_CircuitIds['F04']['lon'], station_CircuitIds['F04']['lat']))
+
+x.append(station_CircuitIds['F05']['lon'])
+y.append(station_CircuitIds['F05']['lat'])
+labels.append(station_CircuitIds['F05']['name'])
+ax.scatter(station_CircuitIds['F05']['lon'], station_CircuitIds['F05']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['F05']['name'], (station_CircuitIds['F05']['lon'], station_CircuitIds['F05']['lat']))
+
+x.append(station_CircuitIds['F06']['lon'])
+y.append(station_CircuitIds['F06']['lat'])
+labels.append(station_CircuitIds['F06']['name'])
+ax.scatter(station_CircuitIds['F06']['lon'], station_CircuitIds['F06']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['F06']['name'], (station_CircuitIds['F06']['lon'], station_CircuitIds['F06']['lat']))
+
+x.append(station_CircuitIds['F07']['lon'])
+y.append(station_CircuitIds['F07']['lat'])
+labels.append(station_CircuitIds['F07']['name'])
+ax.scatter(station_CircuitIds['F07']['lon'], station_CircuitIds['F07']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['F07']['name'], (station_CircuitIds['F07']['lon'], station_CircuitIds['F07']['lat']))
+
+x.append(station_CircuitIds['F09']['lon'])
+y.append(station_CircuitIds['F09']['lat'])
+labels.append(station_CircuitIds['F09']['name'])
+ax.scatter(station_CircuitIds['F09']['lon'], station_CircuitIds['F09']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['F09']['name'], (station_CircuitIds['F09']['lon'], station_CircuitIds['F09']['lat']))
+
+x.append(station_CircuitIds['F10']['lon'])
+y.append(station_CircuitIds['F10']['lat'])
+labels.append(station_CircuitIds['F10']['name'])
+ax.scatter(station_CircuitIds['F10']['lon'], station_CircuitIds['F10']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['F10']['name'], (station_CircuitIds['F10']['lon'], station_CircuitIds['F10']['lat']))
+
+x.append(station_CircuitIds['F11']['lon'])
+y.append(station_CircuitIds['F11']['lat'])
+labels.append(station_CircuitIds['F11']['name'])
+ax.scatter(station_CircuitIds['F11']['lon'], station_CircuitIds['F11']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['F11']['name'], (station_CircuitIds['F11']['lon'], station_CircuitIds['F11']['lat']))
+
+x.append(station_CircuitIds['G01']['lon'])
+y.append(station_CircuitIds['G01']['lat'])
+labels.append(station_CircuitIds['G01']['name'])
+ax.scatter(station_CircuitIds['G01']['lon'], station_CircuitIds['G01']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['G01']['name'], (station_CircuitIds['G01']['lon'], station_CircuitIds['G01']['lat']))
+
+x.append(station_CircuitIds['G02']['lon'])
+y.append(station_CircuitIds['G02']['lat'])
+labels.append(station_CircuitIds['G02']['name'])
+ax.scatter(station_CircuitIds['G02']['lon'], station_CircuitIds['G02']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['G02']['name'], (station_CircuitIds['G02']['lon'], station_CircuitIds['G02']['lat']))
+
+x.append(station_CircuitIds['G03']['lon'])
+y.append(station_CircuitIds['G03']['lat'])
+labels.append(station_CircuitIds['G03']['name'])
+ax.scatter(station_CircuitIds['G03']['lon'], station_CircuitIds['G03']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['G03']['name'], (station_CircuitIds['G03']['lon'], station_CircuitIds['G03']['lat']))
+
+x.append(station_CircuitIds['G04']['lon'])
+y.append(station_CircuitIds['G04']['lat'])
+labels.append(station_CircuitIds['G04']['name'])
+ax.scatter(station_CircuitIds['G04']['lon'], station_CircuitIds['G04']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['G04']['name'], (station_CircuitIds['G04']['lon'], station_CircuitIds['G04']['lat']))
+
+x.append(station_CircuitIds['J02']['lon'])
+y.append(station_CircuitIds['J02']['lat'])
+labels.append(station_CircuitIds['J02']['name'])
+ax.scatter(station_CircuitIds['J02']['lon'], station_CircuitIds['J02']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['J02']['name'], (station_CircuitIds['J02']['lon'], station_CircuitIds['J02']['lat']))
+
+x.append(station_CircuitIds['J03']['lon'])
+y.append(station_CircuitIds['J03']['lat'])
+labels.append(station_CircuitIds['J03']['name'])
+ax.scatter(station_CircuitIds['J03']['lon'], station_CircuitIds['J03']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['J03']['name'], (station_CircuitIds['J03']['lon'], station_CircuitIds['J03']['lat']))
+
+x.append(station_CircuitIds['K01']['lon'])
+y.append(station_CircuitIds['K01']['lat'])
+labels.append(station_CircuitIds['K01']['name'])
+ax.scatter(station_CircuitIds['K01']['lon'], station_CircuitIds['K01']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['K01']['name'], (station_CircuitIds['K01']['lon'], station_CircuitIds['K01']['lat']))
+
+x.append(station_CircuitIds['K02']['lon'])
+y.append(station_CircuitIds['K02']['lat'])
+labels.append(station_CircuitIds['K02']['name'])
+ax.scatter(station_CircuitIds['K02']['lon'], station_CircuitIds['K02']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['K02']['name'], (station_CircuitIds['K02']['lon'], station_CircuitIds['K02']['lat']))
+
+x.append(station_CircuitIds['K03']['lon'])
+y.append(station_CircuitIds['K03']['lat'])
+labels.append(station_CircuitIds['K03']['name'])
+ax.scatter(station_CircuitIds['K03']['lon'], station_CircuitIds['K03']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['K03']['name'], (station_CircuitIds['K03']['lon'], station_CircuitIds['K03']['lat']))
+
+x.append(station_CircuitIds['K04']['lon'])
+y.append(station_CircuitIds['K04']['lat'])
+labels.append(station_CircuitIds['K04']['name'])
+ax.scatter(station_CircuitIds['K04']['lon'], station_CircuitIds['K04']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['K04']['name'], (station_CircuitIds['K04']['lon'], station_CircuitIds['K04']['lat']))
+
+x.append(station_CircuitIds['K05']['lon'])
+y.append(station_CircuitIds['K05']['lat'])
+labels.append(station_CircuitIds['K05']['name'])
+ax.scatter(station_CircuitIds['K05']['lon'], station_CircuitIds['K05']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['K05']['name'], (station_CircuitIds['K05']['lon'], station_CircuitIds['K05']['lat']))
+
+x.append(station_CircuitIds['K06']['lon'])
+y.append(station_CircuitIds['K06']['lat'])
+labels.append(station_CircuitIds['K06']['name'])
+ax.scatter(station_CircuitIds['K06']['lon'], station_CircuitIds['K06']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['K06']['name'], (station_CircuitIds['K06']['lon'], station_CircuitIds['K06']['lat']))
+
+x.append(station_CircuitIds['K07']['lon'])
+y.append(station_CircuitIds['K07']['lat'])
+labels.append(station_CircuitIds['K07']['name'])
+ax.scatter(station_CircuitIds['K07']['lon'], station_CircuitIds['K07']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['K07']['name'], (station_CircuitIds['K07']['lon'], station_CircuitIds['K07']['lat']))
+
+x.append(station_CircuitIds['K08']['lon'])
+y.append(station_CircuitIds['K08']['lat'])
+labels.append(station_CircuitIds['K08']['name'])
+ax.scatter(station_CircuitIds['K08']['lon'], station_CircuitIds['K08']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['K08']['name'], (station_CircuitIds['K08']['lon'], station_CircuitIds['K08']['lat']))
+
+x.append(station_CircuitIds['N01']['lon'])
+y.append(station_CircuitIds['N01']['lat'])
+labels.append(station_CircuitIds['N01']['name'])
+ax.scatter(station_CircuitIds['N01']['lon'], station_CircuitIds['N01']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['N01']['name'], (station_CircuitIds['N01']['lon'], station_CircuitIds['N01']['lat']))#
+
+x.append(station_CircuitIds['N02']['lon'])
+y.append(station_CircuitIds['N02']['lat'])
+labels.append(station_CircuitIds['N02']['name'])
+ax.scatter(station_CircuitIds['N02']['lon'], station_CircuitIds['N02']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['N02']['name'], (station_CircuitIds['N02']['lon'], station_CircuitIds['N02']['lat']))
+
+x.append(station_CircuitIds['N03']['lon'])
+y.append(station_CircuitIds['N03']['lat'])
+labels.append(station_CircuitIds['N03']['name'])
+ax.scatter(station_CircuitIds['N03']['lon'], station_CircuitIds['N03']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['N03']['name'], (station_CircuitIds['N03']['lon'], station_CircuitIds['N03']['lat']))
+
+x.append(station_CircuitIds['N04']['lon'])
+y.append(station_CircuitIds['N04']['lat'])
+labels.append(station_CircuitIds['N04']['name'])
+ax.scatter(station_CircuitIds['N04']['lon'], station_CircuitIds['N04']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['N04']['name'], (station_CircuitIds['N04']['lon'], station_CircuitIds['N04']['lat']))
+
+x.append(station_CircuitIds['N07']['lon'])
+y.append(station_CircuitIds['N07']['lat'])
+labels.append(station_CircuitIds['N07']['name'])
+ax.scatter(station_CircuitIds['N07']['lon'], station_CircuitIds['N07']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['N07']['name'], (station_CircuitIds['N07']['lon'], station_CircuitIds['N07']['lat']))
+
+x.append(station_CircuitIds['N08']['lon'])
+y.append(station_CircuitIds['N08']['lat'])
+labels.append(station_CircuitIds['N08']['name'])
+ax.scatter(station_CircuitIds['N08']['lon'], station_CircuitIds['N08']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['N08']['name'], (station_CircuitIds['N08']['lon'], station_CircuitIds['N08']['lat']))
+
+x.append(station_CircuitIds['N09']['lon'])
+y.append(station_CircuitIds['N09']['lat'])
+labels.append(station_CircuitIds['N09']['name'])
+ax.scatter(station_CircuitIds['N09']['lon'], station_CircuitIds['N09']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['N09']['name'], (station_CircuitIds['N09']['lon'], station_CircuitIds['N09']['lat']))
+
+x.append(station_CircuitIds['N10']['lon'])
+y.append(station_CircuitIds['N10']['lat'])
+labels.append(station_CircuitIds['N10']['name'])
+ax.scatter(station_CircuitIds['N10']['lon'], station_CircuitIds['N10']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['N10']['name'], (station_CircuitIds['N10']['lon'], station_CircuitIds['N10']['lat']))
+
+x.append(station_CircuitIds['N11']['lon'])
+y.append(station_CircuitIds['N11']['lat'])
+labels.append(station_CircuitIds['N11']['name'])
+ax.scatter(station_CircuitIds['N11']['lon'], station_CircuitIds['N11']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['N11']['name'], (station_CircuitIds['N11']['lon'], station_CircuitIds['N11']['lat']))
+
+x.append(station_CircuitIds['N12']['lon'])
+y.append(station_CircuitIds['N12']['lat'])
+labels.append(station_CircuitIds['N12']['name'])
+ax.scatter(station_CircuitIds['N12']['lon'], station_CircuitIds['N12']['lat'], marker='.', color='gray')
+ax.annotate(station_CircuitIds['N12']['name'], (station_CircuitIds['N12']['lon'], station_CircuitIds['N12']['lat']))
+
+
+
+plt.title('WMATA Train Positions')
+plt.xlabel('Longitude')
+plt.ylabel('Latitude')
+plt.legend()
+plt.show()
